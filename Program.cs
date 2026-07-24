@@ -121,6 +121,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors("DevCors");
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" })).AllowAnonymous();
 app.MapControllers();
 
 app.Run();

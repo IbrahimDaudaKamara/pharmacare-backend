@@ -1,0 +1,9 @@
+.git
+.github
+.vs
+bin
+obj
+**/bin
+**/obj
+appsettings.Production.json
+secrets.json

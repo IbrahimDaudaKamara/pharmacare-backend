@@ -86,6 +86,23 @@ Swagger UI is available at **`https://localhost:5001`** (root URL).
 
 ---
 
+## Deploy to Render
+
+This repository includes a `Dockerfile` and `render.yaml` for a Render web service.
+
+1. Push the repository to GitHub, GitLab, or Bitbucket. Do not commit database credentials or JWT secrets.
+2. In Render, select **New > Blueprint**, connect the repository, and deploy the detected `render.yaml`.
+3. Before deploying, set `ConnectionStrings__DefaultConnection` to your SQL Server connection string in Render. The database must be externally reachable from Render.
+4. Render generates `Jwt__Key` automatically. You may replace it with a unique secret of at least 32 characters.
+
+For local development, set the same values with .NET user secrets or environment variables instead of adding them to `appsettings.json`.
+
+Render checks `GET /health` to confirm the API is running. After deployment, open `https://YOUR-SERVICE.onrender.com/health` to verify it.
+
+> Render does not provide a native SQL Server database. Keep using an external SQL Server provider, or migrate this application to a Render-managed database engine.
+
+---
+
 ## 🔌 Connect the Frontend
 
 Open `MediCore_PMS.html` and set the API base URL at the top of the `<script>` section:

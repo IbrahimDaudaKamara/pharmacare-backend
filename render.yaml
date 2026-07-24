@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: medicore-pms-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: UseInMemoryDatabase
+        value: "false"
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: Jwt__Key
+        generateValue: true
+      - key: Jwt__Issuer
+        value: MediCorePMS
+      - key: Jwt__Audience
+        value: MediCorePMSUsers
