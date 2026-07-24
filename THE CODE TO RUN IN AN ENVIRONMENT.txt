@@ -1,0 +1,17 @@
+THE CODE TO RUN IN AN ENVIRONMENT
+
+$env:ASPNETCORE_ENVIRONMENT="Development"; dotnet run
+
+$env:ASPNETCORE_ENVIRONMENT="Development"
+dotnet run --project .\pharmacare-backend\MediCorePMS.csproj
+
+
+
+Name = "Admin User",
+                Email = "admin@medicore.com",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"), 
+                Role = "Admin",
+                Active = true,
+                Avatar = "admin-avatar.png",
+                AvatarColor = "#4F46E5"
+            };

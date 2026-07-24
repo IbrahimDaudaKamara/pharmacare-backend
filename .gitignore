@@ -1,0 +1,23 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+*.DotSettings
+
+## Rider / JetBrains
+.idea/
+
+## NuGet
+*.nupkg
+packages/
+
+## Secrets (never commit these)
+appsettings.Production.json
+secrets.json
+
+## OS
+.DS_Store
+Thumbs.db
