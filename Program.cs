@@ -5,147 +5,286 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MediCorePMS.Data;
 using MediCorePMS.Services;
-using MediCorePMS.Models; // <-- 1. ADDED THIS (Change to .Entities if your User class is there)
+using MediCorePMS.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Database ──────────────────────────────────────────────────────
-var useInMemoryDatabase = builder.Configuration.GetValue("UseInMemoryDatabase", builder.Environment.IsDevelopment());
+// ─────────────────────────────────────────────────────────────────
+// Database Configuration
+// ─────────────────────────────────────────────────────────────────
 
-builder.Services.AddDbContext<AppDbContext>(opt =>
+var useInMemoryDatabase = builder.Configuration.GetValue(
+    "UseInMemoryDatabase",
+    builder.Environment.IsDevelopment()
+);
+
+builder.Services.AddDbContext<AppDbContext>(options =>
 {
     if (useInMemoryDatabase)
     {
-        opt.UseInMemoryDatabase("MediCorePMS");
+        options.UseInMemoryDatabase("MediCorePMS");
     }
     else
     {
-        opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+        options.UseSqlServer(
+            builder.Configuration.GetConnectionString("DefaultConnection")
+        );
     }
 });
 
-// ── JWT Authentication ─────────────────────────────────────────────
-var jwtKey = builder.Configuration["Jwt:Key"]!;
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(opt =>
+// ─────────────────────────────────────────────────────────────────
+// JWT Authentication
+// ─────────────────────────────────────────────────────────────────
+
+var jwtKey = builder.Configuration["Jwt:Key"];
+
+if (string.IsNullOrWhiteSpace(jwtKey))
+{
+    throw new InvalidOperationException(
+        "JWT Key is not configured. Set Jwt:Key in appsettings.json or Jwt__Key in Render environment variables."
+    );
+}
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+var jwtAudience = builder.Configuration["Jwt:Audience"];
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        opt.TokenValidationParameters = new TokenValidationParameters
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer           = true,
-            ValidateAudience         = true,
-            ValidateLifetime         = true,
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer              = builder.Configuration["Jwt:Issuer"],
-            ValidAudience            = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtKey)
+            )
         };
     });
 
 builder.Services.AddAuthorization();
 
-// ── Services ───────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// Application Services
+// ─────────────────────────────────────────────────────────────────
+
 builder.Services.AddScoped<TokenService>();
 
-// ── Controllers ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// Controllers
+// ─────────────────────────────────────────────────────────────────
+
 builder.Services.AddControllers();
 
-// ── CORS (allow frontend on any port during dev) ──────────────────
-builder.Services.AddCors(opt =>
-    opt.AddPolicy("DevCors", p =>
-        p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+// ─────────────────────────────────────────────────────────────────
+// CORS
+// ─────────────────────────────────────────────────────────────────
 
-// ── Swagger / OpenAPI ──────────────────────────────────────────────
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+// Temporary configuration allowing your frontend to communicate
+// with the backend from any origin.
+//
+// After your Vercel frontend is deployed, you should restrict this
+// to your actual Vercel domain for better production security.
+
+builder.Services.AddCors(options =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo
+    options.AddPolicy("DevCors", policy =>
     {
-        Title       = "MediCore PMS API",
-        Version     = "v1",
-        Description = "Pharmacy Management System — Backend API",
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// Swagger / OpenAPI
+// ─────────────────────────────────────────────────────────────────
+
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "MediCore PMS API",
+        Version = "v1",
+        Description = "Pharmacy Management System — Backend API"
     });
 
-    // Add JWT auth to Swagger UI
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    // JWT Authentication in Swagger
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header. Enter: **Bearer {token}**",
-        Name        = "Authorization",
-        In          = ParameterLocation.Header,
-        Type        = SecuritySchemeType.ApiKey,
-        Scheme      = "Bearer",
+        Description =
+            "JWT Authorization header. Enter: Bearer {token}",
+
+        Name = "Authorization",
+
+        In = ParameterLocation.Header,
+
+        Type = SecuritySchemeType.ApiKey,
+
+        Scheme = "Bearer"
     });
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
             new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
             },
+
             Array.Empty<string>()
         }
     });
 });
 
 // ─────────────────────────────────────────────────────────────────
-var app = builder.Build();
+// Build Application
 // ─────────────────────────────────────────────────────────────────
 
-// ── Auto-migrate + seed on startup ────────────────────────────────
+var app = builder.Build();
+
+// ─────────────────────────────────────────────────────────────────
+// Database Migration + Seed
+// ─────────────────────────────────────────────────────────────────
+
 using (var scope = app.Services.CreateScope())
 {
-    var ctx = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var services = scope.ServiceProvider;
 
-    if (useInMemoryDatabase)
+    try
     {
-        ctx.Database.EnsureCreated();
-    }
-    else
-    {
-        ctx.Database.Migrate();
-    }
+        var context = services.GetRequiredService<AppDbContext>();
 
-    DbInitializer.Seed(ctx);
+        if (useInMemoryDatabase)
+        {
+            context.Database.EnsureCreated();
+        }
+        else
+        {
+            context.Database.Migrate();
+        }
+
+        DbInitializer.Seed(context);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+
+        logger.LogError(
+            ex,
+            "An error occurred while initializing the database."
+        );
+
+        throw;
+    }
 }
 
-// ── Middleware ────────────────────────────────────────────────────
-if (app.Environment.IsDevelopment())
+// ─────────────────────────────────────────────────────────────────
+// Swagger
+// ─────────────────────────────────────────────────────────────────
+
+// Swagger is enabled in both Development and Production so that
+// you can test the API from Render.
+
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c =>
+
+    app.UseSwaggerUI(options =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "MediCore PMS API v1");
-        c.RoutePrefix = string.Empty; // Swagger at root /
+        options.SwaggerEndpoint(
+            "/swagger/v1/swagger.json",
+            "MediCore PMS API v1"
+        );
+
+        // Swagger will be available at:
+        // https://your-render-url.onrender.com/swagger
+
+        options.RoutePrefix = "swagger";
     });
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Middleware
+// ─────────────────────────────────────────────────────────────────
+
 app.UseCors("DevCors");
+
 app.UseAuthentication();
+
 app.UseAuthorization();
-app.MapGet("/health", () => Results.Ok(new { status = "healthy" })).AllowAnonymous();
+
+// ─────────────────────────────────────────────────────────────────
+// Render Health Check
+// ─────────────────────────────────────────────────────────────────
+
+app.MapGet(
+    "/health",
+    () => Results.Ok(new
+    {
+        status = "healthy",
+        environment = app.Environment.EnvironmentName
+    })
+).AllowAnonymous();
+
+// ─────────────────────────────────────────────────────────────────
+// Controllers
+// ─────────────────────────────────────────────────────────────────
+
 app.MapControllers();
+
+// ─────────────────────────────────────────────────────────────────
+// Start Application
+// ─────────────────────────────────────────────────────────────────
 
 app.Run();
 
-// ── Declared Types (Must remain at the very bottom) ───────────────
+// ─────────────────────────────────────────────────────────────────
+// Database Initializer
+// ─────────────────────────────────────────────────────────────────
+
 public static class DbInitializer
 {
-    public static void Seed(AppDbContext ctx)
+    public static void Seed(AppDbContext context)
     {
-        if (!ctx.Users.Any())
+        // Prevent duplicate admin users
+        if (!context.Users.Any())
         {
-            var adminUser = new User 
+            var adminUser = new User
             {
                 Name = "Admin User",
+
                 Email = "admin@medicore.com",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"), 
+
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(
+                    "Admin123!"
+                ),
+
                 Role = "Admin",
+
                 Active = true,
+
                 Avatar = "admin-avatar.png",
+
                 AvatarColor = "#4F46E5"
             };
 
-            ctx.Users.Add(adminUser);
-            ctx.SaveChanges();
+            context.Users.Add(adminUser);
+
+            context.SaveChanges();
         }
     }
 }
