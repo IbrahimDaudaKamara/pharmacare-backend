@@ -244,3 +244,5 @@ dotnet ef database update
 | `Microsoft.AspNetCore.Authentication.JwtBearer` | JWT auth middleware |
 | `BCrypt.Net-Next` | Password hashing |
 | `Swashbuckle.AspNetCore` | Swagger/OpenAPI UI |
+#   p h a r m a c a r e - b a c k e n d  
+ 
