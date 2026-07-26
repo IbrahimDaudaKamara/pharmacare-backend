@@ -96,10 +96,11 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("DevCors", policy =>
     {
-        policy
-            .AllowAnyOrigin()
-            .AllowAnyMethod()
-            .AllowAnyHeader();
+        policy.WithOrigins(
+        "https://your-frontend.vercel.app"
+      )
+      .AllowAnyMethod()
+      .AllowAnyHeader();
     });
 });
 
