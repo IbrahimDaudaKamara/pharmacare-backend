@@ -97,7 +97,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("DevCors", policy =>
     {
         policy.WithOrigins(
-        "https://your-frontend.vercel.app"
+        "https://pharmacare-frontend-sigma.vercel.app"
       )
       .AllowAnyMethod()
       .AllowAnyHeader();
