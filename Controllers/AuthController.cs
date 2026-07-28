@@ -12,7 +12,7 @@ namespace MediCorePMS.Controllers;
 [Route("api/[controller]")]
 public class AuthController(AppDbContext db, TokenService tokenService) : ControllerBase
 {
-    private const string AdminKey = "MEDICORE_ADMIN_SECRET";
+    private const string AdminKey = "Ibrahim@78815";
 
     private static bool IsValidEmail(string? email)
     {
